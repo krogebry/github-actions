@@ -23,6 +23,7 @@ runs:
       working-directory: ${{ inputs.test_directory }}
       run: |
         export GOPATH=/tmp/go
+        export GOCACHE=/tmp/.cache
         go mod download all
         STACK_ID=${{ inputs.stack_id }} \
           NAMESPACE=${{ inputs.namespace }} \
