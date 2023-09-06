@@ -1,0 +1,45 @@
+name: Run terratest
+description: Run terratest on a helm deployment
+inputs:
+  stack_id:
+    required: true
+    description: Unique name of the stack to test
+
+  namespace:
+    type: string
+    required: false
+
+  test_directory:
+    type: string
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: test
+      name: Run Terratest integration
+      shell: bash
+      continue-on-error: true
+      working-directory: ${{ inputs.test_directory }}
+      run: |
+        go mod download all
+        STACK_ID=${{ inputs.stack_id }} \
+          NAMESPACE=${{ inputs.namespace }} \
+          go test -v -json |& tee /tmp/out-${{ github.run_id }}.json
+
+    - name: Update Job Summary
+      if: steps.test.outcome == 'success'
+      shell: bash
+      run: |
+        echo "## Terratest ${{ inputs.stack_id }} " >> $GITHUB_STEP_SUMMARY
+        cat /tmp/out-${{ github.run_id }}.json \
+          | grep -v "logger.go:66" \
+          | grep -v "client.go:42" \
+          | gotestfmt -showteststatus --template-dir ${{ inputs.test_directory }}/../ >> $GITHUB_STEP_SUMMARY
+
+    - name: Status
+      if: steps.scan.outcome == 'failure'
+      shell: bash
+      run: |
+        echo -e ":red_circle: Failure" >> $GITHUB_STEP_SUMMARY
+        exit 1
