@@ -1,0 +1,42 @@
+name: Helm kube-score
+description: Run kube-score on a deployed helm chart
+inputs:
+  stack_id:
+    required: true
+    description: Unique name of the stack to test
+  namespace:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      name: Run kube-score
+      shell: bash
+      continue-on-error: true
+      run: |
+        set -xe
+        mkdir -p /tmp/${{ inputs.stack_id }}
+        helm get manifest \
+          --namespace ${{ inputs.namespace }} \
+          ${{ inputs.stack_id }} > /tmp/${{ inputs.stack_id }}.yaml
+
+        kube-score \
+          score \
+          --ignore-test pod-networkpolicy \
+          --ignore-test pod-probes \
+          /tmp/${{ inputs.stack_id }}.yaml \
+          |& tee /tmp/kube-score-${{ github.run_id }}
+
+    - name: Update Job Summary
+      shell: bash
+      run: |
+        echo '## Kube score ' >> $GITHUB_STEP_SUMMARY
+        echo -e "\`\`\`\n $(cat /tmp/kube-score-${{ github.run_id }}) \n \`\`\`" >>$GITHUB_STEP_SUMMARY
+
+    - name: Status
+      if: steps.scan.outcome == 'failure'
+      shell: bash
+      run: |
+        echo -e ":red_circle: Failure" >> $GITHUB_STEP_SUMMARY
+        exit 1
