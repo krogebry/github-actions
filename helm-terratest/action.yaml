@@ -22,10 +22,10 @@ runs:
       continue-on-error: true
       working-directory: ${{ inputs.test_directory }}
       run: |
+        export GOPATH=/tmp/go
         go mod download all
         STACK_ID=${{ inputs.stack_id }} \
           NAMESPACE=${{ inputs.namespace }} \
-          GOPATH=/tmp/go \
           go test -v -json |& tee /tmp/out-${{ github.run_id }}.json
 
     - name: Update Job Summary
