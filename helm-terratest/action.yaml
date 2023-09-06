@@ -38,7 +38,7 @@ runs:
           | gotestfmt -showteststatus --template-dir ${{ inputs.test_directory }}/../ >> $GITHUB_STEP_SUMMARY
 
     - name: Status
-      if: steps.scan.outcome == 'failure'
+      if: steps.test.outcome == 'failure'
       shell: bash
       run: |
         echo -e ":red_circle: Failure" >> $GITHUB_STEP_SUMMARY
